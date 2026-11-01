@@ -22,7 +22,7 @@ class TempleAudioEngine {
 
     this.useSynthMusicFallback = false;
     this.synthBgTimer = null;
-    this.bgAudio = new Audio('/assets/bg_chant.m4a');
+    this.bgAudio = new Audio('/assets/nhac_nen.mp3');
     this.bgAudio.loop = true;
     this.bgAudio.preload = 'auto';
     this.bgAudio.volume = this.bgBaseVolume;
@@ -63,7 +63,7 @@ class TempleAudioEngine {
     this.bgBaseVolume = v;
     try {
       localStorage.setItem('temple_music_vol', String(v));
-    } catch (_) {}
+    } catch (_) { }
     if (this.bgAudio && !this.useSynthMusicFallback) {
       this.bgAudio.volume = this.ttsPlaying ? this.getDuckedVolume() : this.bgBaseVolume;
     }
@@ -75,7 +75,7 @@ class TempleAudioEngine {
     this.ttsVolume = v;
     try {
       localStorage.setItem('temple_tts_vol', String(v));
-    } catch (_) {}
+    } catch (_) { }
     if (this.currentAudio) {
       this.currentAudio.volume = this.ttsVolume;
     }
@@ -136,7 +136,7 @@ class TempleAudioEngine {
         };
         osc.start(now);
         osc.stop(now + 4.25);
-      } catch (_) {}
+      } catch (_) { }
     };
     playZenNote();
     this.synthBgTimer = setInterval(playZenNote, 3600);
@@ -145,7 +145,7 @@ class TempleAudioEngine {
   stopZenAmbience() {
     try {
       this.bgAudio.pause();
-    } catch (_) {}
+    } catch (_) { }
     if (this.synthBgTimer) {
       clearInterval(this.synthBgTimer);
       this.synthBgTimer = null;
@@ -158,7 +158,7 @@ class TempleAudioEngine {
       if (!this.useSynthMusicFallback && this.bgAudio) {
         this.bgAudio.volume = ducked ? this.getDuckedVolume() : this.bgBaseVolume;
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // --------------------------------------------------------------------------
@@ -200,7 +200,7 @@ class TempleAudioEngine {
 
       osc1.start(now);
       osc1.stop(now + 0.16);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // --------------------------------------------------------------------------
@@ -244,7 +244,7 @@ class TempleAudioEngine {
         osc.start(now);
         osc.stop(now + p.decay + 0.05);
       });
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // --------------------------------------------------------------------------
@@ -287,7 +287,76 @@ class TempleAudioEngine {
         osc.start(now + idx * 0.1);
         osc.stop(now + idx * 0.1 + 1.15);
       });
-    } catch (_) {}
+    } catch (_) { }
+  }
+
+  // --------------------------------------------------------------------------
+  // 5B. TIẾNG CHUÔNG GIÓ BÁT NHÃ ĐÓN THÍ CHỦ VÀO LIVE (WELCOME CHIME)
+  // --------------------------------------------------------------------------
+  playWelcomeChime() {
+    if (!this.sfxEnabled) return;
+    const nowMs = Date.now();
+    if (this._lastWelcomeChimeMs && nowMs - this._lastWelcomeChimeMs < 950) return;
+    this._lastWelcomeChimeMs = nowMs;
+    try {
+      const ctx = this.ensureContext();
+      const now = ctx.currentTime;
+      const notes = [440, 587.33, 880];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.085);
+
+        gain.gain.setValueAtTime(0.0001, now + idx * 0.085);
+        gain.gain.linearRampToValueAtTime(0.085, now + idx * 0.085 + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.085 + 0.95);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.onended = () => {
+          osc.disconnect();
+          gain.disconnect();
+        };
+        osc.start(now + idx * 0.085);
+        osc.stop(now + idx * 0.085 + 1.0);
+      });
+    } catch (_) { }
+  }
+
+  // --------------------------------------------------------------------------
+  // 5C. KHÁNH VÀNG CUNG ĐÀN DÂNG LỄ KHI TẶNG QUÀ (GIFT FANFARE ARPEGGIO)
+  // --------------------------------------------------------------------------
+  playGiftFanfare(isGrand = false) {
+    if (!this.sfxEnabled) return;
+    try {
+      const ctx = this.ensureContext();
+      const now = ctx.currentTime;
+      const notes = isGrand
+        ? [523.25, 659.25, 783.99, 1046.5, 1318.5]
+        : [523.25, 659.25, 783.99, 1046.5];
+
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+        const t0 = now + idx * 0.095;
+        osc.frequency.setValueAtTime(freq, t0);
+
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.linearRampToValueAtTime(isGrand ? 0.13 : 0.105, t0 + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + (isGrand ? 1.45 : 1.15));
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.onended = () => {
+          osc.disconnect();
+          gain.disconnect();
+        };
+        osc.start(t0);
+        osc.stop(t0 + (isGrand ? 1.5 : 1.2));
+      });
+    } catch (_) { }
   }
 
   // --------------------------------------------------------------------------
