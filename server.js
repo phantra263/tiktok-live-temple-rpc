@@ -410,7 +410,7 @@ const BRACKET_EMOTE_RE = /\[[^\]]{1,24}\]/g;
 const ALLOWED_VI_TEXT_RE = /[^0-9a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠ-ỹ\s.,!?]/g;
 const ALLOWED_VI_NAME_RE = /[^0-9a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠ-ỹ\s._-]/g;
 const VI_LETTER_RE = /[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠ-ỹ]/g;
-const BAD_WORDS_RE = /(đá dái|địt|lồn|cặc|đm|vcl|vl|yamate|i cư|lừa đảo|lừa à|te-le gram|telegram|bố là trùm)/i;
+const BAD_WORDS_RE = /(ngứa chim|gãi chim|con chim|cờ chim|nứng|djt|đjt|ditme|djtme|đá dái|địt|lồn|cặc|buồi|dái|đụ|đéo|đm|vcl|vl|chịch|xoạc|phò|đĩ|chó đẻ|sống chó|súc vật|bố mày|mẹ mày|yamate|i cư|lừa đảo|lừa à|te-le gram|telegram|bố là trùm|not budda)/i;
 
 function isBlockedSpamOrToxic(raw) {
   if (!raw) return true;
@@ -657,7 +657,8 @@ const Rituals = {
     const isContinuation = Boolean(prevStreak && nowMs - prevStreak.ts < 6000);
     const autoCombo = isContinuation ? prevStreak.combo + 1 : 1;
     const comboCount = Math.max(autoCombo, Number(params.comboCount) || 1);
-    giftStreakTracker.set(streakKey, { combo: comboCount, ts: nowMs });
+    const prevLastTtsTs = prevStreak?.lastTtsTs || 0;
+    giftStreakTracker.set(streakKey, { combo: comboCount, ts: nowMs, lastTtsTs: prevLastTtsTs });
     if (giftStreakTracker.size > 500) {
       const oldestKey = giftStreakTracker.keys().next().value;
       giftStreakTracker.delete(oldestKey);
@@ -712,6 +713,11 @@ const Rituals = {
     const multiplier = coins >= 100 ? 50 : coins >= 10 ? 30 : 20;
     const merit = Math.max(20, coins * multiplier);
 
+    // Kiểm tra thứ hạng trước khi cộng điểm để phát hiện "Soán Ngôi Top 1 / Top 3 Bảng Vàng"
+    const prevLb = getLeaderboard(5);
+    const prevRankIdx = prevLb.findIndex((d) => d.name === user || (uniqueId && d.uniqueId === uniqueId));
+    const prevRank = prevRankIdx >= 0 ? prevRankIdx + 1 : 999;
+
     state.offerings[giftType] = (state.offerings[giftType] || 0) + 1;
     state.totalIncense += 3;
     state.activeIncenseSticks = Math.min(36, state.activeIncenseSticks + 3);
@@ -719,14 +725,37 @@ const Rituals = {
     const wish = params.wish || defaultWish;
     const devotee = recordDevotee(user, uniqueId, avatar, merit, 3, 1, wish);
 
-    // Chống nghẽn giọng đọc khi khách bấm tặng bông liên hoàn: đọc ở bông đầu tiên và các mốc Combo (5, 10, 20, 50, 100)
+    const newLb = getLeaderboard(5);
+    const newRankIdx = newLb.findIndex((d) => d.uniqueId === devotee.uniqueId || d.name === devotee.name);
+    const newRank = newRankIdx >= 0 ? newRankIdx + 1 : 999;
+    const rankUpTo = newRank <= 3 && newRank < prevRank ? newRank : 0;
+
+    // Quẻ Cát Tường Hộ Mệnh ban riêng cho người tặng quà (kích thích người xem tặng bông xin vía)
+    const GIFT_ORACLES = [
+      'Quẻ Đại Cát: Quý nhân phù trợ, cầu tài đắc tài, cầu bình an đắc bình an',
+      'Quẻ Thiên Lộc: Công việc hanh thông, tiền tài rộng mở, gia đạo êm ấm',
+      'Quẻ Hồng Duyên: Tâm sáng phước dày, nhân duyên viên mãn, vạn sự như ý',
+      'Quẻ Trường Thọ: Thân tâm an lạc, tai qua nạn khỏi, phước lộc song toàn',
+      'Quẻ Kim Ngọc: Lộc Phật ban xuống, buôn may bán đắt, đại cát đại lợi'
+    ];
+    const giftOracle = GIFT_ORACLES[(state.offerings[giftType] + comboCount) % GIFT_ORACLES.length];
+    const totalRoses = state.offerings.lotus || 0;
+    const milestoneCeremony = isRoseGift && totalRoses > 0 && totalRoses % 10 === 0;
+
+    // Gộp 1 câu đọc ngắn gọn duy nhất (chống đọc chồng Bình luận + Quà tặng + Tăng hạng cùng lúc)
     const isComboMilestone = comboCount === 1 || comboCount === 5 || comboCount === 10 || comboCount === 20 || comboCount % 25 === 0;
+    const canSpeakByCooldown = nowMs - prevLastTtsTs >= 6500 || rankUpTo === 1 || coins >= 30;
     let ttsText = '';
-    if (params.readTts !== false && (coins >= 30 || !isContinuation || isComboMilestone)) {
-      if (comboCount >= 5 && isRoseGift) {
-        ttsText = `Công đức vô lượng! Cảm tạ đại thí chủ ${devotee.name} đã phát tâm dâng liên hoàn ${comboCount} đóa Hoa Hồng kính Phật, tích tổng ${devotee.merit} điểm tâm đức. Cầu chúc thí chủ gia đạo bình an, vạn sự cát tường.`;
+    if (params.readTts !== false && canSpeakByCooldown && (!isContinuation || isComboMilestone || rankUpTo === 1)) {
+      giftStreakTracker.set(streakKey, { combo: comboCount, ts: nowMs, lastTtsTs: nowMs });
+      if (rankUpTo === 1) {
+        ttsText = `Công đức vô lượng! Cảm tạ đại thí chủ ${devotee.name} dâng ${giftName}, vươn lên vị trí Số 1 Bảng Vàng! Chúc thí chủ vạn sự cát tường.`;
+      } else if (rankUpTo > 0) {
+        ttsText = `Cảm tạ thí chủ ${devotee.name} dâng ${giftName} ${wishTitle}, vươn lên Hạng ${rankUpTo} Bảng Vàng. Nam mô A Di Đà Phật.`;
+      } else if (comboCount >= 5 && isRoseGift) {
+        ttsText = `Công đức vô lượng! Cảm tạ thí chủ ${devotee.name} dâng liên hoàn ${comboCount} đóa Hoa Hồng kính Phật, cầu gia đạo bình an, phước lộc viên mãn.`;
       } else {
-        ttsText = `Công đức vô lượng! Cảm tạ thí chủ ${devotee.name} đã phát tâm dâng ${giftName} ${wishTitle}, tích thêm ${merit} điểm tâm đức. ${wish}. Nam mô A Di Đà Phật.`;
+        ttsText = `Cảm tạ thí chủ ${devotee.name} thành tâm dâng ${giftName} ${wishTitle}, cộng ${merit} tâm đức. Nam mô A Di Đà Phật.`;
       }
     }
 
@@ -740,6 +769,9 @@ const Rituals = {
       giftEmoji,
       giftIcon,
       wishTitle,
+      giftOracle,
+      rankUpTo,
+      milestoneCeremony,
       isRoseGift,
       isComboContinuation: isContinuation,
       comboCount,
@@ -748,6 +780,7 @@ const Rituals = {
       merit,
       wish,
       ttsText,
+      ttsPriority: 3,
       ttsVoice: state.settings.ttsVoice || 'maichi'
     });
 
@@ -871,6 +904,15 @@ const Rituals = {
 let tiktokConn = null;
 
 const commentCooldownMap = new Map();
+const chantTtsCooldownMap = new Map();
+
+const DHARMA_TEACHINGS = [
+  'Tâm bình thế giới bình, tâm an vạn sự lành. Buông bỏ một chút phiền não sẽ đón nhận vạn phần an lạc.',
+  'Gieo nhân lành ắt gặt quả ngọt. Khởi một niệm từ bi, phước báu tự nhiên tìm đến.',
+  'Mỉm cười trước nghịch cảnh, giữ lòng sáng như gương, mọi sóng gió đều hóa thành duyên lành.',
+  'Hiếu thảo với cha mẹ, chân thành với mọi người chính là ruộng phước lớn nhất của đời người.',
+  'Đức năng thắng số, tâm thiện cảm thấu trời xanh, cầu chi cũng được chư Phật gia hộ.'
+];
 
 function parseViewerComment(commentText, user, uniqueId, avatar) {
   const raw = String(commentText || '').trim();
@@ -883,7 +925,7 @@ function parseViewerComment(commentText, user, uniqueId, avatar) {
     cleanWish = 'Thành tâm lễ Phật cầu gia đạo bình an, vạn sự cát tường';
   }
 
-  // Chống 1 người spam bình luận liên tục làm nghẽn hàng đợi TTS (cooldown 1.2 giây/người)
+  // Chống 1 người spam bình luận liên tục (cooldown 1.2 giây/người)
   const userKey = uniqueId || user || '';
   const now = Date.now();
   if (userKey) {
@@ -901,6 +943,21 @@ function parseViewerComment(commentText, user, uniqueId, avatar) {
   const cleanUser = sanitizeUserName(user);
   const lower = cleanWish.toLowerCase();
 
+  // Kiểm tra nếu khách chỉ gõ câu niệm ngắn lặp đi lặp lại ("nam mô", "a di đà phật", "mô phật")
+  // Vẫn cho thắp hương + cộng điểm mỗi lần gõ, nhưng giãn cách đọc TTS 18 giây/người để nhường giọng đọc cho Quà Tặng & Cầu Nguyện riêng!
+  const isShortGenericChant =
+    cleanWish.length <= 24 &&
+    /^(nam mô|nam mo|mô phật|mo phat|a di đà phật|a di da phat|adidaphat|thành tâm lễ phật)/i.test(lower);
+  let shouldReadChantTts = true;
+  if (isShortGenericChant && userKey) {
+    const prevChantTs = chantTtsCooldownMap.get(userKey) || 0;
+    if (now - prevChantTs < 18000) {
+      shouldReadChantTts = false;
+    } else {
+      chantTtsCooldownMap.set(userKey, now);
+    }
+  }
+
   // 1. Xin xăm / Gieo quẻ
   if (
     lower.includes('xin xăm') ||
@@ -913,6 +970,25 @@ function parseViewerComment(commentText, user, uniqueId, avatar) {
     lower.includes('que')
   ) {
     return Rituals.drawFortune({ user: cleanUser, uniqueId, avatar, topic: cleanWish });
+  }
+
+  // 1B. Thỉnh lời dạy của Đức Phật (theo hướng dẫn trên bảng tiêu đề)
+  if (
+    lower.includes('thỉnh lời dạy') ||
+    lower.includes('thinh loi day') ||
+    lower.includes('lời dạy') ||
+    lower.includes('loi day') ||
+    lower.includes('lời phật dạy')
+  ) {
+    const teaching = DHARMA_TEACHINGS[Math.floor(Math.random() * DHARMA_TEACHINGS.length)];
+    return Rituals.ringBell({
+      user: cleanUser,
+      uniqueId,
+      avatar,
+      count: 1,
+      wish: `Lời Phật dạy: ${teaching}`,
+      readTts: true
+    });
   }
 
   // 2. Thỉnh chuông
@@ -936,12 +1012,12 @@ function parseViewerComment(commentText, user, uniqueId, avatar) {
     lower.includes('lạy phật') ||
     lower.includes('lay phat')
   ) {
-    return Rituals.burnIncense({ user: cleanUser, uniqueId, avatar, count: 3, wish: cleanWish });
+    return Rituals.burnIncense({ user: cleanUser, uniqueId, avatar, count: 3, wish: cleanWish, readTts: shouldReadChantTts });
   }
 
   if (lower.includes('adidaphat')) {
     cleanWish = 'Nam Mô A Di Đà Phật, thành tâm lễ Phật cầu bình an cát tường';
-    return Rituals.burnIncense({ user: cleanUser, uniqueId, avatar, count: 3, wish: cleanWish });
+    return Rituals.burnIncense({ user: cleanUser, uniqueId, avatar, count: 3, wish: cleanWish, readTts: shouldReadChantTts });
   }
 
   // 5. Cầu nguyện / Thả đèn hoa đăng
@@ -958,12 +1034,13 @@ function parseViewerComment(commentText, user, uniqueId, avatar) {
     lower.includes('a di da') ||
     lower.includes('bình an') ||
     lower.includes('tài lộc') ||
-    lower.includes('chúc')
+    lower.includes('chúc') ||
+    lower.includes('mong ')
   ) {
-    return Rituals.sendPrayer({ user: cleanUser, uniqueId, avatar, wish: cleanWish });
+    return Rituals.sendPrayer({ user: cleanUser, uniqueId, avatar, wish: cleanWish, readTts: shouldReadChantTts });
   }
 
-  return Rituals.burnIncense({ user: cleanUser, uniqueId, avatar, count: 1, wish: cleanWish });
+  return Rituals.burnIncense({ user: cleanUser, uniqueId, avatar, count: 1, wish: cleanWish, readTts: shouldReadChantTts });
 }
 
 const giftComboTracker = new Map();
@@ -1394,14 +1471,30 @@ function broadcastNotification(method, params) {
   }
 }
 
-wss.on('connection', (ws) => {
+function isObsAudioConnected() {
+  if (typeof wss === 'undefined' || !wss || !wss.clients) return false;
+  for (const c of wss.clients) {
+    if (c.readyState === 1 && c.isObs) return true;
+  }
+  return false;
+}
+
+wss.on('connection', (ws, req) => {
+  ws.isObs = Boolean(req?.url && req.url.includes('obs=1'));
+  const obsActive = isObsAudioConnected();
+  broadcastNotification('temple.audioMaster', { obsAudioActive: obsActive });
+
   ws.send(
     JSON.stringify({
       jsonrpc: '2.0',
       method: 'temple.state',
-      params: getPublicState()
+      params: { ...getPublicState(), obsAudioActive: obsActive }
     })
   );
+
+  ws.on('close', () => {
+    broadcastNotification('temple.audioMaster', { obsAudioActive: isObsAudioConnected() });
+  });
 
   ws.on('message', async (raw) => {
     let msg;

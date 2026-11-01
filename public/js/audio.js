@@ -33,6 +33,72 @@ class TempleAudioEngine {
     this.ttsPlaying = false;
     this.currentAudio = null;
     this.onTtsStateChange = null;
+    this.instanceId = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    this.isObsClient = new URLSearchParams(window.location.search).get('obs') === '1';
+    this.mutedByOtherTab = false;
+
+    // Đồng bộ chống 2 tab trình duyệt phát đè tiếng nhau
+    try {
+      this.audioChannel = new BroadcastChannel('temple_audio_master_channel');
+      this.audioChannel.onmessage = (ev) => {
+        const data = ev.data || {};
+        if (data.type === 'CLAIM_MASTER' && data.instanceId !== this.instanceId) {
+          // Nếu tab kia là OBS hoặc người dùng chủ động bật tiếng ở tab kia -> Tab này tự động nhường âm thanh
+          if (data.isObs || !this.isObsClient) {
+            this.muteAsSecondaryTab();
+          }
+        } else if (data.type === 'PING_OBS' && this.isObsClient) {
+          this.audioChannel.postMessage({
+            type: 'CLAIM_MASTER',
+            instanceId: this.instanceId,
+            isObs: true
+          });
+        }
+      };
+      if (this.isObsClient) {
+        this.audioChannel.postMessage({
+          type: 'CLAIM_MASTER',
+          instanceId: this.instanceId,
+          isObs: true
+        });
+      } else {
+        this.audioChannel.postMessage({ type: 'PING_OBS', instanceId: this.instanceId });
+      }
+    } catch (_) {
+      this.audioChannel = null;
+    }
+  }
+
+  claimAudioMaster(forceManual = false) {
+    this.mutedByOtherTab = false;
+    if (this.audioChannel && (this.isObsClient || forceManual)) {
+      try {
+        this.audioChannel.postMessage({
+          type: 'CLAIM_MASTER',
+          instanceId: this.instanceId,
+          isObs: this.isObsClient || forceManual
+        });
+      } catch (_) {}
+    }
+  }
+
+  muteAsSecondaryTab() {
+    this.mutedByOtherTab = true;
+    this.ttsQueue = [];
+    this.stopCurrentAudio();
+    this.stopZenAmbience();
+  }
+
+  stopCurrentAudio() {
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.onended = null;
+        this.currentAudio.onerror = null;
+        this.currentAudio.pause();
+        this.currentAudio.src = '';
+      } catch (_) {}
+      this.currentAudio = null;
+    }
   }
 
   ensureContext() {
@@ -82,7 +148,7 @@ class TempleAudioEngine {
   }
 
   startZenAmbience() {
-    if (!this.bgMusicEnabled) return;
+    if (!this.bgMusicEnabled || this.mutedByOtherTab) return;
     if (this.useSynthMusicFallback) {
       this.startDefaultZenSynthLoop();
       return;
@@ -165,7 +231,7 @@ class TempleAudioEngine {
   // 2. TIẾNG MÕ GỖ TỤNG KINH (WOODEN FISH PERCUSSION SYNTH)
   // --------------------------------------------------------------------------
   playWoodenFish(pitchMultiplier = 1.0) {
-    if (!this.sfxEnabled) return;
+    if (!this.sfxEnabled || this.mutedByOtherTab) return;
     try {
       const ctx = this.ensureContext();
       const now = ctx.currentTime;
@@ -207,7 +273,7 @@ class TempleAudioEngine {
   // 3. TIẾNG ĐẠI HỒNG CHUNG (TEMPLE BRONZE BELL)
   // --------------------------------------------------------------------------
   playTempleBell(intensity = 1.0) {
-    if (!this.sfxEnabled) return;
+    if (!this.sfxEnabled || this.mutedByOtherTab) return;
     try {
       const ctx = this.ensureContext();
       const now = ctx.currentTime;
@@ -263,7 +329,7 @@ class TempleAudioEngine {
   // 5. TIẾNG CHUÔNG NGỌC DÂNG LỄ / THẮP HƯƠNG (SINGING CHIME)
   // --------------------------------------------------------------------------
   playIncenseChime() {
-    if (!this.sfxEnabled) return;
+    if (!this.sfxEnabled || this.mutedByOtherTab) return;
     try {
       const ctx = this.ensureContext();
       const now = ctx.currentTime;
@@ -294,7 +360,7 @@ class TempleAudioEngine {
   // 5B. TIẾNG CHUÔNG GIÓ BÁT NHÃ ĐÓN THÍ CHỦ VÀO LIVE (WELCOME CHIME)
   // --------------------------------------------------------------------------
   playWelcomeChime() {
-    if (!this.sfxEnabled) return;
+    if (!this.sfxEnabled || this.mutedByOtherTab) return;
     const nowMs = Date.now();
     if (this._lastWelcomeChimeMs && nowMs - this._lastWelcomeChimeMs < 950) return;
     this._lastWelcomeChimeMs = nowMs;
@@ -328,7 +394,7 @@ class TempleAudioEngine {
   // 5C. KHÁNH VÀNG CUNG ĐÀN DÂNG LỄ KHI TẶNG QUÀ (GIFT FANFARE ARPEGGIO)
   // --------------------------------------------------------------------------
   playGiftFanfare(isGrand = false) {
-    if (!this.sfxEnabled) return;
+    if (!this.sfxEnabled || this.mutedByOtherTab) return;
     try {
       const ctx = this.ensureContext();
       const now = ctx.currentTime;
@@ -360,26 +426,48 @@ class TempleAudioEngine {
   }
 
   // --------------------------------------------------------------------------
-  // 6. ZEROTTS VOICE QUEUE & PREFETCHER
+  // 6. ZEROTTS VOICE QUEUE & PREFETCHER (SINGLE-VOICE MUTEX - KHÔNG BAO GIỜ ĐÈ GIỌNG)
   // --------------------------------------------------------------------------
   enqueueTts(text, options = {}) {
     const onStart = typeof options.onStart === 'function' ? options.onStart : null;
     const onEnd = typeof options.onEnd === 'function' ? options.onEnd : null;
 
-    if (!this.ttsEnabled) {
+    if (!this.ttsEnabled || this.mutedByOtherTab) {
       if (onStart) onStart();
-      if (onEnd) setTimeout(onEnd, 5500);
+      if (onEnd) setTimeout(onEnd, 4500);
       return;
     }
     const clean = String(text || '').trim();
     if (!clean) {
       if (onStart) onStart();
-      if (onEnd) setTimeout(onEnd, 5500);
+      if (onEnd) setTimeout(onEnd, 4500);
       return;
     }
 
-    if (this.ttsQueue.length >= 6) {
-      const dropped = this.ttsQueue.shift();
+    const priority = Number(options.priority) || 1;
+    const userKey = String(options.userKey || '').toLowerCase().trim();
+
+    // 1. Chống lặp/đè câu của cùng 1 người (VD: vừa bình luận vừa tặng quà vừa tăng hạng cùng lúc):
+    // Nếu trong hàng đợi đang có câu chưa đọc của cùng người đó (mà không phải câu xin xăm có callback riêng),
+    // thay thế câu cũ bằng câu mới quan trọng hơn thay vì đọc 2-3 câu liên tiếp!
+    if (userKey) {
+      const existingIdx = this.ttsQueue.findIndex((q) => q.userKey === userKey && !q.onStart);
+      if (existingIdx >= 0) {
+        const existing = this.ttsQueue[existingIdx];
+        if (priority >= (existing.priority || 1)) {
+          this.ttsQueue.splice(existingIdx, 1);
+        } else {
+          // Đã có câu ưu tiên cao hơn (VD: câu tặng quà) của người này trong hàng đợi -> Bỏ qua câu bình luận thường
+          return;
+        }
+      }
+    }
+
+    // 2. Giới hạn hàng đợi tối đa 4 câu để âm thanh luôn khớp thời gian thực, không bị trễ/dồn toa
+    while (this.ttsQueue.length >= 4) {
+      const lowIdx = this.ttsQueue.findIndex((q) => (q.priority || 1) <= 1 && !q.onStart);
+      const dropIdx = lowIdx >= 0 ? lowIdx : 0;
+      const [dropped] = this.ttsQueue.splice(dropIdx, 1);
       if (dropped?.onStart) dropped.onStart();
       if (dropped?.onEnd) dropped.onEnd();
     }
@@ -387,6 +475,8 @@ class TempleAudioEngine {
     const item = {
       id: `tts_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       text: clean,
+      priority,
+      userKey,
       voice: (options.voice || this.ttsVoice || 'maichi').toLowerCase(),
       url: options.url || null,
       onStart,
@@ -398,7 +488,18 @@ class TempleAudioEngine {
       item.fetchPromise = this.fetchZeroTtsAudio(item.text, item.voice);
     }
 
-    this.ttsQueue.push(item);
+    if (priority >= 3) {
+      // Quà tặng / Tăng hạng VIP: Đưa lên đầu hàng đợi chờ phát ngay sau khi câu hiện tại kết thúc (KHÔNG cắt ngang đè lên câu đang nói)
+      const insertIdx = this.ttsQueue.findIndex((q) => (q.priority || 1) < 3);
+      if (insertIdx >= 0) {
+        this.ttsQueue.splice(insertIdx, 0, item);
+      } else {
+        this.ttsQueue.push(item);
+      }
+    } else {
+      this.ttsQueue.push(item);
+    }
+
     this.processTtsQueue();
   }
 
@@ -420,67 +521,98 @@ class TempleAudioEngine {
   }
 
   async processTtsQueue() {
-    if (this.ttsPlaying || this.ttsQueue.length === 0) return;
+    // Khóa Mutex nghiêm ngặt: Nếu đang có câu đọc hoặc đang trong nhịp nghỉ giữa 2 câu -> tuyệt đối không chạy song song
+    if (this.ttsPlaying) return;
+    if (this.ttsQueue.length === 0 || this.mutedByOtherTab || !this.ttsEnabled) {
+      this.setBgDucking(false);
+      if (this.onTtsStateChange) {
+        this.onTtsStateChange({ speaking: false, synthesizing: false, text: '' });
+      }
+      return;
+    }
+
     this.ttsPlaying = true;
-    const item = this.ttsQueue.shift();
 
-    try {
-      let audioUrl = item.url;
-      if (!audioUrl && item.fetchPromise) {
-        const res = await item.fetchPromise;
-        if (res && res.ok && res.url) {
-          audioUrl = res.url;
-        }
-      }
+    while (this.ttsQueue.length > 0 && this.ttsEnabled && !this.mutedByOtherTab) {
+      const item = this.ttsQueue.shift();
+      if (!item) break;
 
-      if (audioUrl) {
-        this.setBgDucking(true);
-        if (this.onTtsStateChange) {
-          this.onTtsStateChange({ speaking: true, synthesizing: false, text: item.text });
+      try {
+        let audioUrl = item.url;
+        if (!audioUrl && item.fetchPromise) {
+          const res = await item.fetchPromise;
+          if (res && res.ok && res.url) {
+            audioUrl = res.url;
+          }
         }
+
+        if (audioUrl && this.ttsEnabled && !this.mutedByOtherTab) {
+          this.setBgDucking(true);
+          if (this.onTtsStateChange) {
+            this.onTtsStateChange({ speaking: true, synthesizing: false, text: item.text });
+          }
+          if (item.onStart) item.onStart();
+          await this.playWavUrl(audioUrl);
+          if (item.onEnd) item.onEnd();
+        } else {
+          if (item.onStart) item.onStart();
+          if (item.onEnd) setTimeout(item.onEnd, 4500);
+        }
+      } catch (err) {
+        console.warn('[ZeroTTS Playback Warning]', err);
         if (item.onStart) item.onStart();
-        await this.playWavUrl(audioUrl);
         if (item.onEnd) item.onEnd();
-      } else {
-        if (item.onStart) item.onStart();
-        if (item.onEnd) setTimeout(item.onEnd, 5500);
       }
-    } catch (err) {
-      console.warn('[ZeroTTS Playback Warning]', err);
-      if (item.onStart) item.onStart();
-      if (item.onEnd) item.onEnd();
-    } finally {
-      this.ttsPlaying = false;
-      if (this.ttsQueue.length === 0) {
-        this.setBgDucking(false);
-        if (this.onTtsStateChange) {
-          this.onTtsStateChange({ speaking: false, synthesizing: false, text: '' });
-        }
-      } else {
-        setTimeout(() => this.processTtsQueue(), 250);
+
+      // Nhịp nghỉ tự nhiên 420ms giữa 2 câu đọc (vẫn giữ khóa this.ttsPlaying = true để không câu nào chen ngang!)
+      if (this.ttsQueue.length > 0) {
+        await new Promise((r) => setTimeout(r, 420));
       }
+    }
+
+    this.ttsPlaying = false;
+    this.setBgDucking(false);
+    if (this.onTtsStateChange) {
+      this.onTtsStateChange({ speaking: false, synthesizing: false, text: '' });
     }
   }
 
   playWavUrl(url) {
     return new Promise((resolve) => {
       try {
+        // Đảm bảo hủy triệt để mọi Audio cũ trước khi phát câu mới (100% không bao giờ phát chồng 2 giọng)
+        this.stopCurrentAudio();
+
         const audio = new Audio(url);
         this.currentAudio = audio;
         audio.volume = this.ttsVolume;
-        audio.onended = () => {
-          this.currentAudio = null;
+
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          if (this.currentAudio === audio) {
+            this.currentAudio = null;
+          }
           resolve();
         };
+
+        // Timeout an toàn tối đa 16 giây phòng trường hợp trình duyệt treo sự kiện onended
+        const safetyTimer = setTimeout(finish, 16000);
+
+        audio.onended = () => {
+          clearTimeout(safetyTimer);
+          finish();
+        };
         audio.onerror = () => {
-          this.currentAudio = null;
-          resolve();
+          clearTimeout(safetyTimer);
+          finish();
         };
         const playPromise = audio.play();
         if (playPromise && typeof playPromise.catch === 'function') {
           playPromise.catch(() => {
-            this.currentAudio = null;
-            resolve();
+            clearTimeout(safetyTimer);
+            finish();
           });
         }
       } catch (_) {

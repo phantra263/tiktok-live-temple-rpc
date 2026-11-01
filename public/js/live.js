@@ -29,7 +29,28 @@
   const particles = new window.TempleParticleEngine(canvas);
   const audio = new window.TempleAudioEngine();
 
-  function unlockAudioOnce() {
+  const isObsMode = params.get('obs') === '1';
+  let manualLocalAudioUnlock = false;
+
+  function syncAudioMasterState(obsActive) {
+    const btnUnlock = document.getElementById('btnUnlockAudio');
+    if (!isObsMode && obsActive && !manualLocalAudioUnlock) {
+      audio.muteAsSecondaryTab();
+      if (btnUnlock) {
+        btnUnlock.textContent = '🔇 Đang phát tiếng trên TikTok Studio (Bấm để nghe tại đây)';
+        btnUnlock.classList.remove('active-toggle');
+        btnUnlock.classList.add('gold');
+      }
+    }
+  }
+
+  function unlockAudioOnce(isManualBtn = false) {
+    if (isManualBtn) {
+      manualLocalAudioUnlock = true;
+      audio.claimAudioMaster(true);
+    } else if (audio.mutedByOtherTab && !isObsMode) {
+      return;
+    }
     audio.ensureContext();
     const btnUnlock = document.getElementById('btnUnlockAudio');
     if (btnUnlock) {
@@ -38,9 +59,10 @@
       btnUnlock.classList.add('active-toggle');
     }
   }
-  window.addEventListener('pointerdown', unlockAudioOnce, { once: true });
-  if (params.get('obs') === '1') {
-    setTimeout(unlockAudioOnce, 300);
+  window.addEventListener('pointerdown', () => unlockAudioOnce(false), { once: true });
+  document.getElementById('btnUnlockAudio')?.addEventListener('click', () => unlockAudioOnce(true));
+  if (isObsMode) {
+    setTimeout(() => unlockAudioOnce(false), 300);
   }
 
   // 3. Vẽ các nén nhang đang cháy trong Lư Hương Đỉnh Đồng (x=540, y=895)
@@ -493,15 +515,15 @@
         .join('');
     }
 
-    // Cập nhật Widget Mục Tiêu Đại Lễ Cầu An (Gift / Incense Goal)
-    const totalInc = Number(st.totalIncense || 0);
-    const goalStep = 200;
-    const goalTarget = Math.max(goalStep, Math.ceil((totalInc + 1) / goalStep) * goalStep);
-    const goalPct = Math.min(99, Math.max(8, Math.round(((totalInc % goalStep) / goalStep) * 100)));
+    // Cập nhật Widget Mục Tiêu Đại Lễ Bông Hồng (10 Bông Hồng / Đại Lễ)
+    const totalRoses = Number(st.offerings?.lotus || 0);
+    const goalStep = 10;
+    const currentStepRoses = totalRoses % goalStep;
+    const goalPct = totalRoses > 0 && currentStepRoses === 0 ? 100 : Math.max(10, Math.round((currentStepRoses / goalStep) * 100));
     const goalValEl = document.getElementById('rtGoalValue');
     const goalFillEl = document.getElementById('rtGoalFill');
     if (goalValEl) {
-      goalValEl.textContent = `${totalInc.toLocaleString('vi-VN')} / ${goalTarget.toLocaleString('vi-VN')} Hương (${goalPct}%)`;
+      goalValEl.textContent = `${currentStepRoses} / ${goalStep} Bông 🌹`;
     }
     if (goalFillEl) {
       goalFillEl.style.width = `${goalPct}%`;
@@ -605,7 +627,11 @@
     if (!ev) return;
 
     if (ev.ttsText && ev.type !== 'drawFortune') {
-      audio.enqueueTts(ev.ttsText, { voice: ev.ttsVoice || 'maichi' });
+      audio.enqueueTts(ev.ttsText, {
+        voice: ev.ttsVoice || 'maichi',
+        priority: ev.ttsPriority || (ev.type === 'offerGift' || ev.type === 'grandCeremony' ? 3 : 1),
+        userKey: ev.uniqueId || ev.user || ''
+      });
     }
 
     switch (ev.type) {
@@ -656,8 +682,16 @@
         if (isRose) {
           particles.spawnRoseShower(combo);
           spawnRoseBloomRing(combo);
+          if (ev.milestoneCeremony) {
+            particles.spawnGrandCeremonyRain();
+            showGrandCeremonyBanner(ev.user, 'ĐỦ 10 BÔNG HỒNG — KHAI MỞ ĐẠI LỄ CẦU AN', ev.merit * 2);
+          }
         } else {
           particles.spawnIncenseBurst(540, 895);
+        }
+
+        if (ev.rankUpTo === 1) {
+          showGrandCeremonyBanner(ev.user, '👑 SOÁN NGÔI SỐ 1 BẢNG VÀNG CÔNG ĐỨC', ev.merit);
         }
 
         particles.spawnFloatingMerit(
@@ -998,14 +1032,22 @@
       : `<span class="gcb-gift-emoji">${emoji}</span>`;
 
     const topTagText =
-      combo >= 2 && isRose
-        ? `🌹 BÃO HOA HỒNG LIÊN HOÀN x${combo} • +${Number(ev.merit * combo).toLocaleString('vi-VN')} TÂM ĐỨC`
-        : `✨ ${wishTitle.toUpperCase()} • +${Number(ev.merit || 20).toLocaleString('vi-VN')} TÂM ĐỨC`;
+      ev.rankUpTo === 1
+        ? `👑 TÂN QUÁN QUÂN SỐ 1 BẢNG VÀNG • +${Number(ev.merit || 20).toLocaleString('vi-VN')} TÂM ĐỨC`
+        : ev.rankUpTo > 0
+          ? `🏆 VƯƠN LÊN TOP #${ev.rankUpTo} BẢNG VÀNG • +${Number(ev.merit || 20).toLocaleString('vi-VN')} TÂM ĐỨC`
+          : combo >= 2 && isRose
+            ? `🌹 BÃO HOA HỒNG LIÊN HOÀN x${combo} • +${Number(ev.merit * combo).toLocaleString('vi-VN')} TÂM ĐỨC`
+            : `✨ ${wishTitle.toUpperCase()} • +${Number(ev.merit || 20).toLocaleString('vi-VN')} TÂM ĐỨC`;
+
+    const oracleSub = ev.giftOracle
+      ? `<div class="gcb-oracle-line">📜 ${escapeHtml(ev.giftOracle)}</div>`
+      : '';
 
     layer.innerHTML = `
-      <div class="gift-combo-banner ${isGrand ? 'grand' : ''} ${isRose && combo >= 2 ? 'rose-storm' : ''}">
+      <div class="gift-combo-banner ${isGrand || ev.rankUpTo === 1 ? 'grand' : ''} ${isRose && combo >= 2 ? 'rose-storm' : ''}">
         <div class="gcb-avatar-box">
-          <div class="gcb-crown">${combo >= 5 ? '👑' : '🌹'}</div>
+          <div class="gcb-crown">${ev.rankUpTo === 1 || combo >= 5 ? '👑' : '🌹'}</div>
           <div class="gcb-avatar-ring"></div>
           <div class="gcb-avatar">${avatarHtml}</div>
         </div>
@@ -1013,6 +1055,7 @@
           <div class="gcb-top-tag">${escapeHtml(topTagText)}</div>
           <div class="gcb-user-line">${escapeHtml(shortenName(ev.user, 17))}</div>
           <div class="gcb-gift-line">Dâng cúng <strong>${escapeHtml(ev.giftName || 'Hoa Hồng')}</strong> ${combo >= 2 ? `<em>(Liên hoàn ${combo} bông!)</em>` : ''}</div>
+          ${oracleSub}
         </div>
         <div class="gcb-combo-right">
           <div class="gcb-icon-circle">${iconHtml}</div>
@@ -1116,13 +1159,19 @@
 
   function connectWebSocket() {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(`${proto}//${window.location.host}/ws`);
+    const wsQuery = isObsMode ? '?obs=1' : '';
+    ws = new WebSocket(`${proto}//${window.location.host}/ws${wsQuery}`);
 
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
         if (msg.method === 'temple.state') {
+          if (typeof msg.params?.obsAudioActive === 'boolean') {
+            syncAudioMasterState(msg.params.obsAudioActive);
+          }
           updateUIState(msg.params);
+        } else if (msg.method === 'temple.audioMaster') {
+          syncAudioMasterState(Boolean(msg.params?.obsAudioActive));
         } else if (msg.method === 'temple.event') {
           if (msg.params?.state) updateUIState(msg.params.state);
           if (msg.params?.event) triggerRitualVisuals(msg.params.event);
@@ -1135,12 +1184,7 @@
           }
         } else if (msg.method === 'tts.clear') {
           audio.ttsQueue = [];
-          if (audio.currentAudio) {
-            try {
-              audio.currentAudio.pause();
-            } catch (_) {}
-            audio.currentAudio = null;
-          }
+          audio.stopCurrentAudio();
           audio.ttsPlaying = false;
           updateCentralWorshipper('Thí Chủ Hữu Duyên', '', '✨ Thành tâm lễ Phật', 'Nam Mô A Di Đà Phật, cầu bình an cát tường', false);
         }
@@ -1154,7 +1198,9 @@
   connectWebSocket();
 
   async function callRpc(method, params = {}) {
-    audio.ensureContext();
+    if (!audio.mutedByOtherTab) {
+      audio.ensureContext();
+    }
     const payload = {
       jsonrpc: '2.0',
       id: rpcId++,
