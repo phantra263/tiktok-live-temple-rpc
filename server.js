@@ -119,9 +119,11 @@ class ZeroTTSManager {
   }
 
   resolvePythonBin() {
+    const venvWin = path.join(__dirname, '.venv', 'Scripts', 'python.exe');
+    if (fs.existsSync(venvWin)) return venvWin;
     const venvPy = path.join(__dirname, '.venv', 'bin', 'python');
     if (fs.existsSync(venvPy)) return venvPy;
-    return 'python3';
+    return process.platform === 'win32' ? 'python' : 'python3';
   }
 
   startWorker() {
@@ -130,9 +132,28 @@ class ZeroTTSManager {
     console.log(`[ZeroTTS] Khởi chạy worker với ${pyBin} (Giọng mặc định: Mai Chi)...`);
 
     this.status = 'loading';
-    this.proc = spawn(pyBin, [scriptPath], {
-      cwd: __dirname,
-      stdio: ['pipe', 'pipe', 'pipe']
+    try {
+      this.proc = spawn(pyBin, [scriptPath], {
+        cwd: __dirname,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+    } catch (err) {
+      console.warn(`[ZeroTTS Warning] Không thể khởi chạy Python: ${err.message}`);
+      this.ready = false;
+      this.status = 'unavailable';
+      return;
+    }
+
+    this.proc.on('error', (err) => {
+      console.warn(`[ZeroTTS Warning] Không tìm thấy Python (${pyBin}): ${err.message}`);
+      console.warn('[ZeroTTS] Hệ thống Chánh Điện, mõ, chuông, quẻ xăm vẫn hoạt động bình thường!');
+      this.ready = false;
+      this.status = 'unavailable';
+      for (const [, item] of this.pending) {
+        clearTimeout(item.timer);
+        item.resolve({ ok: false, error: 'ZeroTTS not available' });
+      }
+      this.pending.clear();
     });
 
     this.proc.stdout.on('data', (chunk) => {
