@@ -2910,3 +2910,479 @@ body.obs-mode .stage-wrapper {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+
+/* ==========================================================================
+   20. LÀM RÕ NÉT BẢNG VÀNG CÔNG ĐỨC & BẢNG QUY ĐỔI LỄ VẬT (HIGH-CONTRAST HD)
+   Tăng kích thước chữ, độ tương phản nền sơn mài đậm, viền vàng sáng và
+   huy hiệu thứ hạng/xu rõ ràng khi phát trực tiếp trên TikTok LIVE Studio.
+   ========================================================================== */
+
+/* 20.1. BẢNG VÀNG CÔNG ĐỨC (BÊN TRÁI) */
+.side-merit-board {
+  left: 56px !important;
+  top: 356px !important;
+  width: 272px !important;
+  padding: 13px 11px 11px !important;
+  border-radius: 18px !important;
+  background: linear-gradient(180deg, rgba(24, 6, 3, 0.97) 0%, rgba(12, 3, 2, 0.98) 100%) !important;
+  border: 2.5px solid #ffd466 !important;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.92),
+    0 0 18px rgba(244, 193, 80, 0.28),
+    inset 0 0 16px rgba(255, 215, 95, 0.14) !important;
+  gap: 8px !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+.smb-header {
+  padding-bottom: 7px !important;
+  border-bottom: 1.5px solid rgba(255, 212, 102, 0.45) !important;
+}
+
+.smb-title {
+  font-size: 19.5px !important;
+  font-weight: 900 !important;
+  color: #fff0a8 !important;
+  letter-spacing: 0.5px !important;
+  line-height: 1.15 !important;
+  text-shadow: 0 2px 5px #000000, 0 0 12px rgba(255, 200, 60, 0.45) !important;
+}
+
+.smb-subtitle {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #ffda7b !important;
+  margin-top: 3px !important;
+  text-shadow: 0 1px 3px #000000 !important;
+}
+
+.smb-list {
+  gap: 6.5px !important;
+}
+
+.smb-row {
+  gap: 8px !important;
+  padding: 6px 8px !important;
+  border-radius: 11px !important;
+  background: rgba(42, 14, 7, 0.92) !important;
+  border: 1.5px solid rgba(244, 193, 80, 0.42) !important;
+}
+
+.smb-row.top-1 {
+  background: linear-gradient(90deg, rgba(138, 56, 8, 0.95) 0%, rgba(56, 18, 5, 0.95) 100%) !important;
+  border: 2px solid #ffe47a !important;
+  box-shadow: 0 0 12px rgba(255, 205, 70, 0.35) !important;
+}
+
+.smb-row.top-2,
+.smb-row.top-3 {
+  background: linear-gradient(90deg, rgba(98, 40, 9, 0.92) 0%, rgba(44, 14, 5, 0.94) 100%) !important;
+  border: 1.5px solid rgba(255, 214, 102, 0.78) !important;
+}
+
+.smb-rank {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  background: rgba(244, 193, 80, 0.22) !important;
+  border: 1.5px solid #f4c150 !important;
+  color: #fff3b0 !important;
+}
+
+.smb-row.top-1 .smb-rank {
+  background: linear-gradient(180deg, #fff3a6 0%, #e09915 100%) !important;
+  color: #240602 !important;
+  border-color: #ffffff !important;
+}
+
+.smb-row.top-2 .smb-rank {
+  background: linear-gradient(180deg, #ffffff 0%, #b8c4d0 100%) !important;
+  color: #1a2026 !important;
+  border-color: #ffffff !important;
+}
+
+.smb-row.top-3 .smb-rank {
+  background: linear-gradient(180deg, #ffd4a8 0%, #c86b24 100%) !important;
+  color: #260a02 !important;
+  border-color: #ffe8cc !important;
+}
+
+.smb-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border: 2px solid #ffe694 !important;
+  font-size: 15px !important;
+}
+
+.smb-name {
+  font-size: 15.5px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  line-height: 1.18 !important;
+  text-shadow: 0 2px 4px #000000 !important;
+}
+
+.smb-merit {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  color: #ffe066 !important;
+  line-height: 1.15 !important;
+  text-shadow: 0 1px 3px #000000 !important;
+}
+
+.smb-footer-goal {
+  border-top: 1.5px solid rgba(255, 212, 102, 0.38) !important;
+  padding-top: 7px !important;
+  gap: 5px !important;
+}
+
+.smb-goal-row {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  color: #fff4d6 !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+}
+
+.smb-goal-row strong {
+  font-size: 14.5px !important;
+  font-weight: 900 !important;
+  color: #ffe47a !important;
+}
+
+/* 20.2. BẢNG QUY ĐỔI LỄ VẬT (BÊN PHẢI) */
+.side-gift-menu {
+  right: 56px !important;
+  top: 356px !important;
+  width: 272px !important;
+  padding: 13px 11px 11px !important;
+  border-radius: 18px !important;
+  background: linear-gradient(180deg, rgba(24, 6, 3, 0.97) 0%, rgba(12, 3, 2, 0.98) 100%) !important;
+  border: 2.5px solid #ffd466 !important;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.92),
+    0 0 18px rgba(244, 193, 80, 0.28),
+    inset 0 0 16px rgba(255, 215, 95, 0.14) !important;
+  gap: 6px !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sgm-header {
+  text-align: center;
+  padding-bottom: 7px !important;
+  border-bottom: 1.5px solid rgba(255, 212, 102, 0.45) !important;
+  margin-bottom: 1px !important;
+}
+
+.sgm-title {
+  font-family: 'Noto Serif', serif;
+  font-size: 19.5px !important;
+  font-weight: 900 !important;
+  color: #fff0a8 !important;
+  letter-spacing: 0.5px !important;
+  line-height: 1.15 !important;
+  text-shadow: 0 2px 5px #000000, 0 0 12px rgba(255, 200, 60, 0.45) !important;
+}
+
+.sgm-subtitle {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #ffda7b !important;
+  margin-top: 3px !important;
+  text-shadow: 0 1px 3px #000000 !important;
+}
+
+.sgm-item {
+  gap: 9px !important;
+  padding: 5px 8px !important;
+  border-radius: 11px !important;
+  background: linear-gradient(90deg, rgba(78, 28, 9, 0.9) 0%, rgba(36, 11, 5, 0.92) 100%) !important;
+  border: 1.5px solid rgba(255, 212, 102, 0.55) !important;
+}
+
+.sgm-icon-wrap {
+  width: 42px !important;
+  height: 42px !important;
+  border: 2px solid #ffe484 !important;
+  background: radial-gradient(circle, rgba(255, 205, 85, 0.52) 0%, rgba(128, 26, 10, 0.96) 72%) !important;
+}
+
+.sgm-emoji {
+  font-size: 23px !important;
+}
+
+.sgm-coin-badge {
+  min-width: 22px !important;
+  height: 20px !important;
+  padding: 0 5px !important;
+  bottom: -3px !important;
+  right: -4px !important;
+  background: #c9190e !important;
+  border: 1.5px solid #fff099 !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.9) !important;
+}
+
+.sgm-wish-title {
+  font-size: 16.5px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  line-height: 1.18 !important;
+  text-shadow: 0 2px 4px #000000 !important;
+}
+
+.sgm-gift-name {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  color: #ffe066 !important;
+  line-height: 1.15 !important;
+  text-shadow: 0 1px 3px #000000 !important;
+}
+
+.sgm-disclaimer {
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: #f5deb3 !important;
+  padding-top: 5px !important;
+  line-height: 1.3 !important;
+  border-top: 1.5px solid rgba(255, 212, 102, 0.32) !important;
+}
+
+
+/* ==========================================================================
+   21. LÀM RÕ NÉT NGƯỜI XEM VÀO LIVE, ĐẠO TRÀNG QUỲ LỄ, HÀNG VIP & CHỦ LỄ
+   - Bỏ lớp phủ làm mờ/tối Phật tử ngồi hai bên thảm đỏ
+   - Tăng cỡ chữ & độ nét cho Thẻ Nghênh Đón người xem mới vào Live
+   - Phóng rõ nhân vật bước lên thảm đỏ & tách vị trí để không đè lên Chủ Lễ
+   ========================================================================== */
+
+/* 21.1. Thẻ Nghênh Đón Thí Chủ Mới Vào Live */
+.member-welcome-layer {
+  top: 716px !important;
+  width: 486px !important;
+}
+
+.member-welcome-card {
+  padding: 11px 16px !important;
+  background: linear-gradient(135deg, rgba(32, 8, 4, 0.98) 0%, rgba(14, 3, 2, 0.99) 100%) !important;
+  border: 2.5px solid #ffe074 !important;
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.95),
+    0 0 26px rgba(255, 205, 70, 0.65),
+    inset 0 0 14px rgba(255, 215, 95, 0.22) !important;
+}
+
+.mwc-avatar-wrap {
+  width: 54px !important;
+  height: 54px !important;
+}
+
+.mwc-avatar {
+  width: 50px !important;
+  height: 50px !important;
+  border: 2.5px solid #fff3b0 !important;
+  font-size: 20px !important;
+}
+
+.mwc-overline {
+  font-size: 12.5px !important;
+  font-weight: 900 !important;
+  color: #ffe066 !important;
+  text-shadow: 0 1px 3px #000000 !important;
+}
+
+.mwc-username {
+  font-size: 21px !important;
+  font-weight: 900 !important;
+  color: #ffffff !important;
+  text-shadow: 0 2px 6px #000000, 0 0 14px rgba(255, 200, 60, 0.6) !important;
+}
+
+.mwc-sub {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #fff1cc !important;
+  text-shadow: 0 1px 3px #000000 !important;
+}
+
+/* 21.2. Nhân vật Người Xem Mới Bước Lên Thảm Đỏ (Rõ nét, không đè lên Chủ Lễ) */
+.carpet-guest-walker {
+  top: 1365px !important;
+  transform: translate(-50%, -100%) scale(1) !important;
+  z-index: 32 !important;
+}
+
+@keyframes guestCarpetWalkUp {
+  0% {
+    top: 1765px;
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(1.1);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    top: 1365px;
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+.cgw-sprite {
+  width: 134px !important;
+  filter:
+    brightness(1.12)
+    contrast(1.08)
+    drop-shadow(0 8px 16px rgba(0, 0, 0, 0.92))
+    drop-shadow(0 0 14px rgba(255, 215, 95, 0.55)) !important;
+}
+
+.cgw-badge {
+  margin-top: -6px !important;
+  padding: 5px 14px 5px 6px !important;
+  gap: 7px !important;
+  background: rgba(18, 4, 2, 0.98) !important;
+  border: 2px solid #ffe074 !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.95), 0 0 14px rgba(255, 205, 70, 0.55) !important;
+}
+
+.cgw-avatar {
+  width: 28px !important;
+  height: 28px !important;
+  border: 1.5px solid #fff3b0 !important;
+  font-size: 13px !important;
+}
+
+.cgw-name {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px #000000 !important;
+}
+
+/* 21.3. Đạo Tràng Phật Tử Ngồi Hai Bên Thảm Đỏ (Bỏ làm mờ, hiển thị sáng rõ) */
+.tiktok-comment-scrim {
+  background: linear-gradient(
+    180deg,
+    rgba(8, 2, 2, 0) 0%,
+    rgba(8, 2, 2, 0.18) 35%,
+    rgba(6, 1, 1, 0.42) 75%,
+    rgba(5, 1, 1, 0.62) 100%
+  ) !important;
+}
+
+.congregation-hall {
+  z-index: 13 !important;
+}
+
+.hall-seat.seat-side-L .devotee-sprite,
+.hall-seat.seat-side-R .devotee-sprite {
+  opacity: 0.96 !important;
+  filter:
+    brightness(1.08)
+    contrast(1.06)
+    drop-shadow(0 5px 10px rgba(0, 0, 0, 0.85)) !important;
+}
+
+.hall-seat.seat-side-L .seat-badge,
+.hall-seat.seat-side-R .seat-badge {
+  display: inline-flex !important;
+  padding: 3px 10px 3px 4px !important;
+  background: rgba(14, 4, 2, 0.96) !important;
+  border: 1.5px solid #ffd466 !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.9) !important;
+}
+
+.seat-avatar {
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 11px !important;
+}
+
+.seat-username {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  max-width: 96px !important;
+  text-shadow: 0 2px 4px #000000 !important;
+}
+
+/* 21.4. Hàng 6 Đệm Quỳ VIP & Chủ Lễ Trung Tâm */
+.vip-devotee-slot .devotee-sprite {
+  width: 110px !important;
+  height: 142px !important;
+  filter:
+    brightness(1.08)
+    contrast(1.06)
+    drop-shadow(0 6px 12px rgba(0, 0, 0, 0.85)) !important;
+}
+
+.vip-rank-pill {
+  padding: 3.5px 10px 3.5px 4px !important;
+  max-width: 122px !important;
+  background: rgba(16, 4, 2, 0.97) !important;
+  border: 2px solid #ffd466 !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.9) !important;
+}
+
+.vip-rank-num {
+  width: 21px !important;
+  height: 21px !important;
+  font-size: 12.5px !important;
+  font-weight: 900 !important;
+}
+
+.vip-rank-name {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  max-width: 88px !important;
+  text-shadow: 0 2px 4px #000000 !important;
+}
+
+.worshipper-wish-bubble {
+  max-width: 420px !important;
+  padding: 7px 16px !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: #fff3b0 !important;
+  background: rgba(16, 4, 2, 0.97) !important;
+  border: 2px solid #ffd466 !important;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.9) !important;
+  text-shadow: 0 2px 4px #000000 !important;
+}
+
+.central-name-tag {
+  padding: 6px 16px 6px 7px !important;
+  background: rgba(16, 4, 2, 0.98) !important;
+  border: 2px solid #ffe074 !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.92) !important;
+}
+
+.central-name-tag .tag-avatar {
+  width: 34px !important;
+  height: 34px !important;
+  font-size: 15px !important;
+}
+
+.central-name-tag .tag-name {
+  font-size: 16.5px !important;
+  font-weight: 900 !important;
+  max-width: 185px !important;
+  text-shadow: 0 2px 4px #000000 !important;
+}
+
+.central-name-tag .tag-sub {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  color: #ffe066 !important;
+  text-shadow: 0 1px 3px #000000 !important;
+}

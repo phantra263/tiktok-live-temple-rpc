@@ -105,12 +105,12 @@
 
   // 4. Dựng Hàng 6 Đệm Quỳ VIP (Top 6 Thí Chủ trên bục gỗ y=1188, thu vào vùng an toàn điện thoại x=176..904)
   const VIP_CUSHION_COORDS = [
-    { x: 176, y: 1188, rank: 1 },
-    { x: 286, y: 1188, rank: 2 },
+    { x: 152, y: 1188, rank: 1 },
+    { x: 274, y: 1188, rank: 2 },
     { x: 396, y: 1188, rank: 3 },
     { x: 684, y: 1188, rank: 4 },
-    { x: 794, y: 1188, rank: 5 },
-    { x: 904, y: 1188, rank: 6 }
+    { x: 806, y: 1188, rank: 5 },
+    { x: 928, y: 1188, rank: 6 }
   ];
 
   function renderVipCushions(leaderboard = []) {
@@ -125,7 +125,7 @@
           <img src="/assets/devotee.png" alt="VIP Devotee" class="devotee-sprite" />
           <div class="vip-rank-pill">
             <span class="vip-rank-num">${slot.rank}</span>
-            <span class="vip-rank-name">${escapeHtml(shortenName(dev.name, 9))}</span>
+            <span class="vip-rank-name">${escapeHtml(shortenName(dev.name, 12))}</span>
           </div>
         </div>
       `;
@@ -438,7 +438,7 @@
               <span class="smb-rank">${item.rank}</span>
               <span class="smb-avatar">${avatarInner}</span>
               <div class="smb-info">
-                <div class="smb-name">${escapeHtml(shortenName(item.name, 13))}</div>
+                <div class="smb-name">${escapeHtml(shortenName(item.name, 15))}</div>
                 <div class="smb-merit">★ ${Number(item.merit || 0).toLocaleString('vi-VN')} tâm đức</div>
               </div>
             </div>
@@ -877,7 +877,7 @@
       <img src="${SPRITE_FRAMES.walk1}" class="cgw-sprite" alt="" />
       <div class="cgw-badge">
         <span class="cgw-avatar">${avatarHtml}</span>
-        <span class="cgw-name">👋 ${escapeHtml(shortenName(ev.user, 11))}</span>
+        <span class="cgw-name">👋 ${escapeHtml(shortenName(ev.user, 16))}</span>
       </div>
     `;
 
@@ -991,7 +991,7 @@
     totalRosesOfferedSession += 1;
     const peaceItemSub = document.querySelector('#giftItemPeace .sgm-gift-name');
     if (peaceItemSub) {
-      peaceItemSub.textContent = `Hoa hồng • ${totalRosesOfferedSession} 🌹`;
+      peaceItemSub.textContent = `Hoa hồng (1 xu) • ${totalRosesOfferedSession} 🌹`;
     }
 
     const bloomCount = Math.min(10, 4 + combo);
