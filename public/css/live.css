@@ -3215,8 +3215,8 @@ body.obs-mode .stage-wrapper {
 
 /* 21.2. Nhân vật Người Xem Mới Bước Lên Thảm Đỏ (Rõ nét, không đè lên Chủ Lễ) */
 .carpet-guest-walker {
-  top: 1365px !important;
-  transform: translate(-50%, -100%) scale(1) !important;
+  animation: none !important;
+  transform: translate3d(-50%, -100%, 0) scale(var(--cgw-scale, 1)) rotate(var(--cgw-lean, 0deg)) !important;
   z-index: 32 !important;
 }
 
@@ -3385,4 +3385,342 @@ body.obs-mode .stage-wrapper {
   font-weight: 800 !important;
   color: #ffe066 !important;
   text-shadow: 0 1px 3px #000000 !important;
+}
+
+
+/* ==========================================================================
+   22. HỆ THỐNG CHUYỂN ĐỘNG NGƯỜI VÀO / RA CHÁNH ĐIỆN CHÂN THẬT (REALISTIC CROWD)
+   - Dáng đi vật lý nhún bước chân, nghiêng vai, bóng đổ mặt đất & phối cảnh 3D
+   - Dấu chân Hoa Sen vàng nở theo từng bước chân trên thảm đỏ
+   - Nghi thức quỳ lạy có độ nhún khớp lưng + Sóng Pháp Luân tỏa ra dưới chiếu
+   - Người lễ xong đi vào ghế Đạo Tràng (nháy sáng ghế) hoặc đi dọc hành lang ra về
+   - Toàn bộ 46 Phật tử trong Đạo Tràng có nhịp thở niệm Phật sống động liên tục
+   ========================================================================== */
+
+/* 22.1. Khung nhân vật di chuyển trên mặt sàn (Phối cảnh 3D & Quỹ đạo mượt) */
+.carpet-guest-walker {
+  position: absolute;
+  transform-origin: bottom center !important;
+  transition:
+    left var(--cgw-move-ms, 2200ms) cubic-bezier(0.25, 0.72, 0.35, 1),
+    top var(--cgw-move-ms, 2200ms) cubic-bezier(0.25, 0.72, 0.35, 1),
+    transform var(--cgw-move-ms, 2200ms) cubic-bezier(0.25, 0.72, 0.35, 1),
+    opacity 0.45s ease !important;
+  will-change: left, top, transform, opacity;
+}
+
+.carpet-guest-walker.cgw-merge-seat {
+  opacity: 0 !important;
+  transform: translate3d(-50%, -100%, 0) scale(calc(var(--cgw-scale, 0.85) * 0.92)) !important;
+  filter: brightness(1.85) drop-shadow(0 0 24px #ffd56b);
+}
+
+.carpet-guest-walker.cgw-fade-exit {
+  opacity: 0 !important;
+  transform: translate3d(-50%, -92%, 0) scale(1.28) !important;
+}
+
+/* 22.2. Khớp cơ thể nhân vật (Nhịp nhún bước chân, lắc vai & cúi lạy vật lý) */
+.cgw-body-rig {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: bottom center;
+  transition: transform 0.2s cubic-bezier(0.22, 0.85, 0.32, 1);
+  z-index: 2;
+}
+
+.carpet-guest-walker.cgw-walking .cgw-body-rig {
+  animation: cgwRealisticWalkGait 0.36s ease-in-out infinite !important;
+}
+
+@keyframes cgwRealisticWalkGait {
+  0% {
+    transform: translate3d(-2px, 0px, 0) rotate(-2.4deg) scale(1, 0.985);
+  }
+  25% {
+    transform: translate3d(0px, -10px, 0) rotate(0deg) scale(0.985, 1.028);
+  }
+  50% {
+    transform: translate3d(2px, 0px, 0) rotate(2.4deg) scale(1, 0.985);
+  }
+  75% {
+    transform: translate3d(0px, -10px, 0) rotate(0deg) scale(0.985, 1.028);
+  }
+  100% {
+    transform: translate3d(-2px, 0px, 0) rotate(-2.4deg) scale(1, 0.985);
+  }
+}
+
+/* Chuyển động khớp lưng mềm mại khi hạ gối và vái lạy */
+.carpet-guest-walker.cgw-kneel-down .cgw-body-rig {
+  transform: translate3d(0, 6px, 0) scale(1.03, 0.93);
+}
+.carpet-guest-walker.cgw-kneel .cgw-body-rig {
+  transform: translate3d(0, 2px, 0) scale(1, 0.98);
+}
+.carpet-guest-walker.cgw-bow-prep .cgw-body-rig {
+  transform: translate3d(0, -4px, 0) scale(0.99, 1.03);
+}
+.carpet-guest-walker.cgw-bow-mid .cgw-body-rig {
+  transform: translate3d(0, 6px, 0) scale(1.04, 0.92);
+}
+.carpet-guest-walker.cgw-bow-low .cgw-body-rig {
+  transform: translate3d(0, 9px, 0) scale(1.06, 0.89);
+}
+.carpet-guest-walker.cgw-bow-deep .cgw-body-rig {
+  transform: translate3d(0, 12px, 0) scale(1.08, 0.86);
+}
+
+/* Hào quang hộ thân sau lưng nhân vật */
+.cgw-aura-halo {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  width: 118px;
+  height: 118px;
+  transform: translate(-50%, 0);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 225, 115, 0.42) 0%,
+    rgba(255, 175, 50, 0.14) 55%,
+    transparent 75%
+  );
+  z-index: -1;
+  pointer-events: none;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.carpet-guest-walker.cgw-bow-deep .cgw-aura-halo {
+  transform: translate(-50%, 10px) scale(1.45);
+  background: radial-gradient(
+    circle,
+    rgba(255, 240, 150, 0.78) 0%,
+    rgba(255, 195, 60, 0.35) 55%,
+    transparent 76%
+  );
+}
+
+/* Bóng đổ mặt đất co giãn theo nhịp bước chân */
+.cgw-ground-shadow {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  width: 84px;
+  height: 24px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.42) 55%,
+    transparent 78%
+  );
+  z-index: -2;
+  pointer-events: none;
+}
+
+.carpet-guest-walker.cgw-walking .cgw-ground-shadow {
+  animation: cgwShadowBounce 0.18s ease-in-out infinite alternate;
+}
+
+@keyframes cgwShadowBounce {
+  0% {
+    transform: translateX(-50%) scale(1.05, 1);
+    opacity: 0.88;
+  }
+  100% {
+    transform: translateX(-50%) scale(0.84, 0.82);
+    opacity: 0.62;
+  }
+}
+
+/* Bong bóng trạng thái hành lễ trên đầu người vào/ra */
+.cgw-status-bubble {
+  padding: 4px 13px;
+  margin-bottom: 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(38, 10, 4, 0.96) 0%, rgba(16, 4, 2, 0.98) 100%);
+  border: 1.5px solid #ffe074;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.9), 0 0 10px rgba(255, 205, 70, 0.35);
+  color: #fff3b0;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px #000000;
+  animation: statusBubbleFloat 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes statusBubbleFloat {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+
+.cgw-badge.cgw-badge-exit {
+  border-color: #ffd180 !important;
+  background: linear-gradient(90deg, rgba(44, 14, 6, 0.96) 0%, rgba(20, 5, 2, 0.98) 100%) !important;
+}
+
+/* Vòng Sóng Pháp Luân tỏa ra trên mặt thảm khi cúi lạy sát đất */
+.cgw-prostrate-wave {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  width: 120px;
+  height: 44px;
+  transform: translate(-50%, 0) scale(0.3);
+  border-radius: 50%;
+  border: 2.5px solid #ffe57f;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 235, 130, 0.65) 0%,
+    rgba(255, 185, 50, 0.25) 55%,
+    transparent 78%
+  );
+  box-shadow: 0 0 24px rgba(255, 215, 75, 0.9);
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.cgw-prostrate-wave.active {
+  animation: prostrateWaveExpand 0.95s cubic-bezier(0.16, 0.84, 0.32, 1) forwards;
+}
+
+@keyframes prostrateWaveExpand {
+  0% {
+    opacity: 0.95;
+    transform: translate(-50%, 0) scale(0.45);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(2.15);
+  }
+}
+
+/* 22.3. Dấu Chân Hoa Sen Vàng nở theo từng bước chân trên thảm đỏ */
+.carpet-footprint-ripple {
+  position: absolute;
+  width: 48px;
+  height: 22px;
+  transform: translate(-50%, -50%) scale(var(--fp-scale, 1));
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 224, 115, 0.88);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 215, 85, 0.52) 0%,
+    rgba(255, 145, 35, 0.18) 60%,
+    transparent 80%
+  );
+  box-shadow: 0 0 12px rgba(255, 200, 65, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 12;
+  animation: footprintLotusBloom 1.05s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+.carpet-footprint-ripple.fp-exit {
+  border-color: rgba(255, 195, 130, 0.75);
+}
+
+.carpet-footprint-ripple .fp-lotus {
+  font-size: 13px;
+  line-height: 1;
+  transform: translateY(-4px);
+  filter: drop-shadow(0 0 6px rgba(255, 225, 110, 0.9));
+}
+
+@keyframes footprintLotusBloom {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(calc(var(--fp-scale, 1) * 0.45));
+  }
+  22% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(calc(var(--fp-scale, 1) * 1.05));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(calc(var(--fp-scale, 1) * 1.55));
+  }
+}
+
+/* 22.4. Chuyển động Thở & Vái Lạy Sống Động cho 40 Phật Tử Đạo Tràng & 6 VIP */
+.hall-seat .devotee-sprite,
+.vip-devotee-slot .devotee-sprite {
+  transform-origin: bottom center;
+  transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), filter 0.25s ease;
+  animation: devoteeLivingBreath 3.4s ease-in-out infinite alternate;
+}
+
+@keyframes devoteeLivingBreath {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1, 0.988) rotate(-0.5deg);
+  }
+  50% {
+    transform: translate3d(0, -2.5px, 0) scale(1.012, 1.016) rotate(0deg);
+  }
+  100% {
+    transform: translate3d(0, -1px, 0) scale(0.995, 1.008) rotate(0.5deg);
+  }
+}
+
+/* Khi Phật tử trong Đạo Tràng hoặc VIP cúi lạy theo làn sóng */
+.hall-seat.is-bowing-prepare .devotee-sprite,
+.vip-devotee-slot.is-bowing-prepare .devotee-sprite {
+  animation: none !important;
+  transform: translate3d(0, -3px, 0) scale(0.99, 1.03) !important;
+}
+
+.hall-seat.is-bowing .devotee-sprite,
+.vip-devotee-slot.is-bowing .devotee-sprite {
+  animation: none !important;
+  transform: translate3d(0, 5px, 0) scale(1.04, 0.92) !important;
+}
+
+.hall-seat.is-bowing-deep .devotee-sprite,
+.vip-devotee-slot.is-bowing-deep .devotee-sprite {
+  animation: none !important;
+  transform: translate3d(0, 10px, 0) scale(1.07, 0.86) !important;
+  filter:
+    brightness(1.22)
+    contrast(1.08)
+    drop-shadow(0 5px 12px rgba(255, 215, 85, 0.55)) !important;
+}
+
+/* Hiệu ứng ghế Đạo Tràng bừng sáng khi có người mới bước vào ngồi xuống */
+.hall-seat.seat-arrival-flash .devotee-sprite {
+  animation: seatArrivalBounce 0.75s cubic-bezier(0.2, 0.9, 0.3, 1.25) !important;
+  filter:
+    brightness(1.45)
+    drop-shadow(0 0 18px rgba(255, 220, 95, 0.95)) !important;
+}
+
+.hall-seat.seat-arrival-flash .seat-badge {
+  border-color: #fff3b0 !important;
+  box-shadow: 0 0 18px rgba(255, 215, 75, 0.95) !important;
+  transform: scale(1.14);
+  transition: transform 0.3s ease;
+}
+
+@keyframes seatArrivalBounce {
+  0% {
+    transform: translate3d(0, -14px, 0) scale(1.16);
+  }
+  55% {
+    transform: translate3d(0, 4px, 0) scale(1.04, 0.94);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Khi Phật tử ở ghế đó vừa đứng dậy bước ra thảm đỏ để lễ tạ ra về */
+.hall-seat.seat-temporarily-standing .devotee-sprite {
+  opacity: 0.18 !important;
+  transition: opacity 0.35s ease;
 }

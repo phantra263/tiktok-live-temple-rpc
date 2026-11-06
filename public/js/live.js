@@ -238,6 +238,72 @@
     if (congregationHall) {
       const seats = congregationHall.querySelectorAll('.hall-seat');
       seats.forEach((el, i) => {
+        if (!fullHall && i % 3 !== 0 && Math.random() > 0.35) return;
+        const img = el.querySelector('.devotee-sprite');
+        if (!img) return;
+        const delay = fullHall
+          ? Math.floor(i / 8) * 85 + (i % 4) * 32
+          : (i % 5) * 70 + Math.round(Math.random() * 60);
+        setTimeout(() => {
+          img.src = SPRITE_FRAMES.forehead;
+          el.classList.add('is-bowing-prepare');
+        }, delay);
+        setTimeout(() => {
+          img.src = SPRITE_FRAMES.bowMid;
+          el.classList.remove('is-bowing-prepare');
+          el.classList.add('is-bowing');
+        }, delay + 145);
+        setTimeout(() => {
+          img.src = SPRITE_FRAMES.prostrateDeep;
+          el.classList.add('is-bowing-deep');
+        }, delay + 310);
+        setTimeout(() => {
+          img.src = SPRITE_FRAMES.bowMid;
+          el.classList.remove('is-bowing-deep');
+        }, delay + 640);
+        setTimeout(() => {
+          img.src = SPRITE_FRAMES.kneel;
+          el.classList.remove('is-bowing');
+        }, delay + 820);
+      });
+    }
+    const vipLayer = document.getElementById('vipCushionsLayer');
+    if (vipLayer) {
+      const vipSlots = vipLayer.querySelectorAll('.vip-devotee-slot');
+      vipSlots.forEach((slot, idx) => {
+        if (!fullHall && idx % 2 !== 0 && Math.random() > 0.5) return;
+        const img = slot.querySelector('.devotee-sprite');
+        if (!img) return;
+        const delay = idx * 60;
+        setTimeout(() => {
+          img.src = SPRITE_FRAMES.forehead;
+          slot.classList.add('is-bowing-prepare');
+        }, delay);
+        setTimeout(() => {
+          img.src = SPRITE_FRAMES.bowMid;
+          slot.classList.remove('is-bowing-prepare');
+          slot.classList.add('is-bowing');
+        }, delay + 150);
+        setTimeout(() => {
+          img.src = SPRITE_FRAMES.prostrateDeep;
+          slot.classList.add('is-bowing-deep');
+        }, delay + 320);
+        setTimeout(() => {
+          img.src = SPRITE_FRAMES.bowMid;
+          slot.classList.remove('is-bowing-deep');
+        }, delay + 680);
+        setTimeout(() => {
+          img.src = SPRITE_FRAMES.kneel;
+          slot.classList.remove('is-bowing');
+        }, delay + 850);
+      });
+    }
+  }
+
+  function _legacyPulseHallBowing(fullHall = false) {
+    if (congregationHall) {
+      const seats = congregationHall.querySelectorAll('.hall-seat');
+      seats.forEach((el, i) => {
         if (!fullHall && i % 4 !== 0) return;
         const img = el.querySelector('.devotee-sprite');
         if (!img) return;
@@ -854,7 +920,459 @@
     }, 3900);
   }
 
+  let walkerSeqCounter = 0;
+  let lastWalkerSpawnMs = 0;
+
+  function spawnFootprintRipple(layer, x, y, scale = 1, isExit = false) {
+    if (!layer) return;
+    const fp = document.createElement('div');
+    fp.className = `carpet-footprint-ripple${isExit ? ' fp-exit' : ''}`;
+    fp.style.left = `${Math.round(x)}px`;
+    fp.style.top = `${Math.round(y)}px`;
+    fp.style.setProperty('--fp-scale', String(scale));
+    fp.innerHTML = `<span class="fp-lotus">🪷</span>`;
+    layer.appendChild(fp);
+    setTimeout(() => fp.remove(), 1100);
+  }
+
+  function flashHallSeatArrival(seatIdx, user, avatar) {
+    if (!congregationHall) return;
+    const seatEl = congregationHall.querySelector(`.hall-seat[data-seat-idx="${seatIdx}"]`);
+    if (!seatEl) return;
+
+    seatEl.classList.remove('seat-arrival-flash');
+    void seatEl.offsetWidth;
+    seatEl.classList.add('seat-arrival-flash');
+
+    if (user) {
+      let badge = seatEl.querySelector('.seat-badge');
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.className = 'seat-badge';
+        seatEl.appendChild(badge);
+      }
+      const avatarHtml = avatar
+        ? `<img src="${escapeHtml(avatar)}" alt="" />`
+        : escapeHtml(String(user || 'P').trim().charAt(0).toUpperCase());
+      badge.innerHTML = `
+        <span class="seat-avatar">${avatarHtml}</span>
+        <span class="seat-username">${escapeHtml(shortenName(user, 11))}</span>
+      `;
+    }
+
+    setTimeout(() => {
+      seatEl.classList.remove('seat-arrival-flash');
+    }, 2400);
+  }
+
   function spawnCarpetGuestWalker(ev) {
+    const layer = document.getElementById('carpetWalkerLayer');
+    if (!layer || !ev) return;
+
+    lastWalkerSpawnMs = Date.now();
+    walkerSeqCounter++;
+
+    // Giới hạn tối đa 6 nhân vật đang di chuyển cùng lúc để khung hình mượt
+    const activeWalkers = layer.querySelectorAll('.carpet-guest-walker');
+    if (activeWalkers.length >= 6) {
+      activeWalkers[0].remove();
+    }
+
+    // Luân phiên: 2/3 khách sau khi lạy Phật sẽ đi vào ngồi ghế Đạo Tràng, 1/3 khách lạy xong sẽ đi dọc hành lang ra về
+    const mode = walkerSeqCounter % 3 === 0 ? 'aisleExit' : 'takeSeat';
+    const startX = 540 + Math.round((Math.random() - 0.5) * 86);
+    const startY = 1865;
+    const startScale = 1.22;
+
+    const stopX = 540 + Math.round((Math.random() - 0.5) * 94);
+    const stopY = 1320 + Math.round(Math.random() * 58);
+    const stopScale = +(0.92 + ((stopY - 1320) / 400) * 0.1).toFixed(2);
+
+    const avatarHtml = ev.avatar
+      ? `<img src="${escapeHtml(ev.avatar)}" alt="" />`
+      : escapeHtml(String(ev.user || 'P').trim().charAt(0).toUpperCase());
+
+    const walker = document.createElement('div');
+    walker.className = 'carpet-guest-walker cgw-walking cgw-entering';
+    walker.style.left = `${startX}px`;
+    walker.style.top = `${startY}px`;
+    walker.style.setProperty('--cgw-scale', String(startScale));
+    walker.style.setProperty('--cgw-lean', '0deg');
+    walker.style.setProperty('--cgw-move-ms', '2250ms');
+
+    walker.innerHTML = `
+      <div class="cgw-status-bubble">🙏 Thành tâm tiến lễ...</div>
+      <div class="cgw-body-rig">
+        <div class="cgw-aura-halo"></div>
+        <img src="${SPRITE_FRAMES.walk1}" class="cgw-sprite" alt="" />
+      </div>
+      <div class="cgw-ground-shadow"></div>
+      <div class="cgw-lotus-step"></div>
+      <div class="cgw-prostrate-wave"></div>
+      <div class="cgw-badge">
+        <span class="cgw-avatar">${avatarHtml}</span>
+        <span class="cgw-name">👋 ${escapeHtml(shortenName(ev.user, 16))}</span>
+      </div>
+    `;
+
+    layer.appendChild(walker);
+    const spriteEl = walker.querySelector('.cgw-sprite');
+    const statusEl = walker.querySelector('.cgw-status-bubble');
+    const waveEl = walker.querySelector('.cgw-prostrate-wave');
+    const stepTimers = [];
+
+    // Bắt đầu di chuyển từ cổng Tam Quan (y=1865) lên trước bàn thờ (y=stopY)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const leanDeg = ((stopX - startX) * 0.04).toFixed(1);
+        walker.style.setProperty('--cgw-lean', `${leanDeg}deg`);
+        walker.style.left = `${stopX}px`;
+        walker.style.top = `${stopY}px`;
+        walker.style.setProperty('--cgw-scale', String(stopScale));
+      });
+    });
+
+    // Bước chân 1 -> 12 (0ms -> 2160ms) kèm dấu chân hoa sen nở trên thảm đỏ
+    const totalWalkInSteps = 12;
+    for (let step = 1; step <= totalWalkInSteps; step++) {
+      stepTimers.push(
+        setTimeout(() => {
+          if (!walker.isConnected) return;
+          if (spriteEl) {
+            spriteEl.src = step % 2 === 0 ? SPRITE_FRAMES.walk1 : SPRITE_FRAMES.walk2;
+          }
+          const t = step / totalWalkInSteps;
+          const curX = startX + (stopX - startX) * t + (step % 2 === 0 ? -11 : 11);
+          const curY = startY + (stopY - startY) * t;
+          const curScale = +(startScale + (stopScale - startScale) * t).toFixed(2);
+          if (step % 2 === 1 || step === totalWalkInSteps) {
+            spawnFootprintRipple(layer, curX, curY, curScale, false);
+          }
+        }, step * 180)
+      );
+    }
+
+    // Giai đoạn 2: Dừng bước, hạ gối quỳ và Đảnh lễ 2 lạy trang nghiêm (2250ms -> 5100ms)
+    const bowTimeline = [
+      [2250, SPRITE_FRAMES.kneelDown, 'cgw-kneel-down', '🙇 Hạ gối kính lễ Tam Bảo...'],
+      [2420, SPRITE_FRAMES.kneel, 'cgw-kneel', `🙏 Cầu bình an • +${Number(ev.merit || 2)} Tâm Đức`],
+      [2600, SPRITE_FRAMES.forehead, 'cgw-bow-prep', ''],
+      [2780, SPRITE_FRAMES.bowMid, 'cgw-bow-mid', ''],
+      [2960, SPRITE_FRAMES.prostrate, 'cgw-bow-low', ''],
+      [3120, SPRITE_FRAMES.prostrateDeep, 'cgw-bow-deep', '✨ Nhất tâm đảnh lễ A Di Đà Phật'],
+      [3520, SPRITE_FRAMES.bowMid, 'cgw-bow-mid', ''],
+      [3700, SPRITE_FRAMES.kneel, 'cgw-kneel', ''],
+      [3920, SPRITE_FRAMES.forehead, 'cgw-bow-prep', ''],
+      [4090, SPRITE_FRAMES.bowMid, 'cgw-bow-mid', ''],
+      [4260, SPRITE_FRAMES.prostrateDeep, 'cgw-bow-deep', '🪷 Nguyện cầu gia đạo bình an'],
+      [4680, SPRITE_FRAMES.bowMid, 'cgw-bow-mid', ''],
+      [4880, SPRITE_FRAMES.kneel, 'cgw-kneel', '']
+    ];
+
+    bowTimeline.forEach(([ms, src, poseClass, bubbleText]) => {
+      stepTimers.push(
+        setTimeout(() => {
+          if (!walker.isConnected) return;
+          walker.classList.remove(
+            'cgw-walking',
+            'cgw-entering',
+            'cgw-kneel-down',
+            'cgw-kneel',
+            'cgw-bow-prep',
+            'cgw-bow-mid',
+            'cgw-bow-low',
+            'cgw-bow-deep'
+          );
+          walker.classList.add('cgw-praying', poseClass);
+          walker.style.setProperty('--cgw-lean', '0deg');
+          if (spriteEl) spriteEl.src = src;
+          if (bubbleText && statusEl) statusEl.textContent = bubbleText;
+
+          if (poseClass === 'cgw-bow-deep' && waveEl) {
+            waveEl.classList.remove('active');
+            void waveEl.offsetWidth;
+            waveEl.classList.add('active');
+            pulseHallBowing(false);
+          }
+        }, ms)
+      );
+    });
+
+    // Giai đoạn 3: Đứng dậy và đi vào hàng ghế Đạo Tràng HOẶC bước ra theo lối hành lang hai bên (5120ms -> 7350ms)
+    stepTimers.push(
+      setTimeout(() => {
+        if (!walker.isConnected) return;
+        walker.classList.remove('cgw-praying', 'cgw-kneel', 'cgw-bow-mid', 'cgw-bow-deep');
+        if (spriteEl) spriteEl.src = SPRITE_FRAMES.kneelDown;
+      }, 5080)
+    );
+
+    if (mode === 'takeSeat' && HALL_SEAT_COORDS.length > 0) {
+      const candidateIndices = [3, 4, 11, 12, 19, 20, 27, 28, 2, 5, 10, 13, 18, 21, 26, 29];
+      const chosenSeatIdx = candidateIndices[walkerSeqCounter % candidateIndices.length];
+      const targetSeat = HALL_SEAT_COORDS[chosenSeatIdx] || HALL_SEAT_COORDS[0];
+      const seatMoveMs = 1650;
+
+      stepTimers.push(
+        setTimeout(() => {
+          if (!walker.isConnected) return;
+          walker.classList.add('cgw-walking', 'cgw-moving-to-seat');
+          if (statusEl) statusEl.textContent = '🪷 Vào hàng ghế Đạo Tràng';
+          const dx = targetSeat.x - stopX;
+          walker.style.setProperty('--cgw-lean', dx < 0 ? '-4.5deg' : '4.5deg');
+          walker.style.setProperty('--cgw-move-ms', `${seatMoveMs}ms`);
+          walker.style.left = `${targetSeat.x}px`;
+          walker.style.top = `${targetSeat.y}px`;
+          walker.style.setProperty('--cgw-scale', String(targetSeat.scale));
+        }, 5220)
+      );
+
+      const seatSteps = 9;
+      for (let s = 1; s <= seatSteps; s++) {
+        stepTimers.push(
+          setTimeout(() => {
+            if (!walker.isConnected) return;
+            if (spriteEl) {
+              spriteEl.src = s % 2 === 0 ? SPRITE_FRAMES.walk1 : SPRITE_FRAMES.walk2;
+            }
+            const t = s / seatSteps;
+            const cx = stopX + (targetSeat.x - stopX) * t;
+            const cy = stopY + (targetSeat.y - stopY) * t;
+            if (s % 2 === 1) {
+              spawnFootprintRipple(layer, cx, cy, targetSeat.scale, false);
+            }
+          }, 5220 + s * 175)
+        );
+      }
+
+      stepTimers.push(
+        setTimeout(() => {
+          if (!walker.isConnected) return;
+          walker.classList.remove('cgw-walking', 'cgw-moving-to-seat');
+          walker.classList.add('cgw-merge-seat');
+          walker.style.setProperty('--cgw-lean', '0deg');
+          if (spriteEl) spriteEl.src = SPRITE_FRAMES.kneel;
+          flashHallSeatArrival(chosenSeatIdx, ev.user, ev.avatar);
+        }, 6880)
+      );
+
+      stepTimers.push(
+        setTimeout(() => {
+          while (stepTimers.length) clearTimeout(stepTimers.pop());
+          walker.remove();
+        }, 7450)
+      );
+    } else {
+      // Kịch bản đi ra dọc theo hành lang thảm đỏ (trái hoặc phải) về phía cổng dưới màn hình
+      const goLeft = walkerSeqCounter % 2 === 0;
+      const aisleX = goLeft
+        ? 368 + Math.round((Math.random() - 0.5) * 28)
+        : 712 + Math.round((Math.random() - 0.5) * 28);
+      const exitY = 1885;
+      const exitScale = 1.24;
+      const exitMoveMs = 2150;
+
+      stepTimers.push(
+        setTimeout(() => {
+          if (!walker.isConnected) return;
+          walker.classList.add('cgw-walking', 'cgw-exiting-aisle');
+          if (statusEl) statusEl.textContent = '✨ Nhận phước lành • Hoan hỷ';
+          walker.style.setProperty('--cgw-lean', goLeft ? '-3deg' : '3deg');
+          walker.style.setProperty('--cgw-move-ms', `${exitMoveMs}ms`);
+          walker.style.left = `${aisleX}px`;
+          walker.style.top = `${exitY}px`;
+          walker.style.setProperty('--cgw-scale', String(exitScale));
+        }, 5220)
+      );
+
+      const exitSteps = 11;
+      for (let s = 1; s <= exitSteps; s++) {
+        stepTimers.push(
+          setTimeout(() => {
+            if (!walker.isConnected) return;
+            if (spriteEl) {
+              spriteEl.src = s % 2 === 0 ? SPRITE_FRAMES.walk1 : SPRITE_FRAMES.walk2;
+            }
+            const t = s / exitSteps;
+            const cx = stopX + (aisleX - stopX) * t + (s % 2 === 0 ? -9 : 9);
+            const cy = stopY + (exitY - stopY) * t;
+            const cs = +(stopScale + (exitScale - stopScale) * t).toFixed(2);
+            if (s % 2 === 1) {
+              spawnFootprintRipple(layer, cx, cy, cs, true);
+            }
+          }, 5220 + s * 185)
+        );
+      }
+
+      stepTimers.push(
+        setTimeout(() => {
+          if (!walker.isConnected) return;
+          walker.classList.add('cgw-fade-exit');
+        }, 7100)
+      );
+
+      stepTimers.push(
+        setTimeout(() => {
+          while (stepTimers.length) clearTimeout(stepTimers.pop());
+          walker.remove();
+        }, 7600)
+      );
+    }
+  }
+
+  // Hiệu ứng Phật tử từ hàng ghế Đạo Tràng đứng dậy, bước ra thảm đỏ vái tạ Phật rồi đi về
+  let leavingPilgrimCounter = 0;
+
+  function spawnLeavingDevotee(customName) {
+    const layer = document.getElementById('carpetWalkerLayer');
+    if (!layer || !HALL_SEAT_COORDS.length) return;
+
+    const activeWalkers = layer.querySelectorAll('.carpet-guest-walker');
+    if (activeWalkers.length >= 5) return;
+
+    leavingPilgrimCounter++;
+    const seatPool = [3, 4, 11, 12, 19, 20, 27, 28];
+    const seatIdx = seatPool[leavingPilgrimCounter % seatPool.length];
+    const seat = HALL_SEAT_COORDS[seatIdx] || HALL_SEAT_COORDS[3];
+
+    const seatEl = congregationHall?.querySelector(`.hall-seat[data-seat-idx="${seatIdx}"]`);
+    const seatNameEl = seatEl?.querySelector('.seat-username');
+    const pilgrimName = customName || seatNameEl?.textContent || 'Thí Chủ Hữu Duyên';
+
+    if (seatEl) {
+      seatEl.classList.add('seat-temporarily-standing');
+      setTimeout(() => seatEl.classList.remove('seat-temporarily-standing'), 4200);
+    }
+
+    const aisleX = seat.side === 'L' ? 405 : 675;
+    const bowY = Math.max(1340, seat.y - 10);
+    const exitX = seat.side === 'L' ? 375 : 705;
+    const exitY = 1885;
+
+    const walker = document.createElement('div');
+    walker.className = 'carpet-guest-walker cgw-leaving-guest';
+    walker.style.left = `${seat.x}px`;
+    walker.style.top = `${seat.y}px`;
+    walker.style.setProperty('--cgw-scale', String(seat.scale));
+    walker.style.setProperty('--cgw-lean', '0deg');
+    walker.style.setProperty('--cgw-move-ms', '850ms');
+
+    const initialChar = escapeHtml(String(pilgrimName || 'P').trim().charAt(0).toUpperCase());
+    walker.innerHTML = `
+      <div class="cgw-status-bubble">🙏 Lễ tạ Tam Bảo...</div>
+      <div class="cgw-body-rig">
+        <div class="cgw-aura-halo"></div>
+        <img src="${SPRITE_FRAMES.kneelDown}" class="cgw-sprite" alt="" />
+      </div>
+      <div class="cgw-ground-shadow"></div>
+      <div class="cgw-lotus-step"></div>
+      <div class="cgw-prostrate-wave"></div>
+      <div class="cgw-badge cgw-badge-exit">
+        <span class="cgw-avatar">${initialChar}</span>
+        <span class="cgw-name">🌸 ${escapeHtml(shortenName(pilgrimName, 15))}</span>
+      </div>
+    `;
+
+    layer.appendChild(walker);
+    const spriteEl = walker.querySelector('.cgw-sprite');
+    const statusEl = walker.querySelector('.cgw-status-bubble');
+    const waveEl = walker.querySelector('.cgw-prostrate-wave');
+    const timers = [];
+
+    // Bước 1: Đứng dậy từ ghế ngồi bước ra mép thảm đỏ (0ms -> 880ms)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        walker.classList.add('cgw-walking');
+        walker.style.setProperty('--cgw-lean', seat.side === 'L' ? '3.5deg' : '-3.5deg');
+        walker.style.left = `${aisleX}px`;
+        walker.style.top = `${bowY}px`;
+      });
+    });
+
+    for (let s = 1; s <= 4; s++) {
+      timers.push(
+        setTimeout(() => {
+          if (spriteEl) spriteEl.src = s % 2 === 0 ? SPRITE_FRAMES.walk1 : SPRITE_FRAMES.walk2;
+        }, s * 190)
+      );
+    }
+
+    // Bước 2: Chắp tay cúi xá lễ tạ trước khi ra về (900ms -> 1850ms)
+    timers.push(
+      setTimeout(() => {
+        if (!walker.isConnected) return;
+        walker.classList.remove('cgw-walking');
+        walker.classList.add('cgw-praying', 'cgw-bow-prep');
+        walker.style.setProperty('--cgw-lean', '0deg');
+        if (spriteEl) spriteEl.src = SPRITE_FRAMES.forehead;
+      }, 900)
+    );
+    timers.push(
+      setTimeout(() => {
+        if (!walker.isConnected) return;
+        walker.classList.add('cgw-bow-mid');
+        if (spriteEl) spriteEl.src = SPRITE_FRAMES.bowMid;
+        if (waveEl) {
+          waveEl.classList.remove('active');
+          void waveEl.offsetWidth;
+          waveEl.classList.add('active');
+        }
+      }, 1150)
+    );
+    timers.push(
+      setTimeout(() => {
+        if (!walker.isConnected) return;
+        walker.classList.remove('cgw-bow-mid');
+        if (spriteEl) spriteEl.src = SPRITE_FRAMES.forehead;
+      }, 1550)
+    );
+
+    // Bước 3: Bước dọc hành lang thảm đỏ đi ra cổng Tam Quan (1820ms -> 3950ms)
+    timers.push(
+      setTimeout(() => {
+        if (!walker.isConnected) return;
+        walker.classList.remove('cgw-praying', 'cgw-bow-prep');
+        walker.classList.add('cgw-walking', 'cgw-exiting-aisle');
+        if (statusEl) statusEl.textContent = '✨ Bình an hoan hỷ ra về';
+        walker.style.setProperty('--cgw-move-ms', '2050ms');
+        walker.style.setProperty('--cgw-lean', seat.side === 'L' ? '-2.5deg' : '2.5deg');
+        walker.style.left = `${exitX}px`;
+        walker.style.top = `${exitY}px`;
+        walker.style.setProperty('--cgw-scale', '1.22');
+      }, 1820)
+    );
+
+    const outSteps = 10;
+    for (let s = 1; s <= outSteps; s++) {
+      timers.push(
+        setTimeout(() => {
+          if (!walker.isConnected) return;
+          if (spriteEl) spriteEl.src = s % 2 === 0 ? SPRITE_FRAMES.walk1 : SPRITE_FRAMES.walk2;
+          const t = s / outSteps;
+          const cx = aisleX + (exitX - aisleX) * t + (s % 2 === 0 ? -8 : 8);
+          const cy = bowY + (exitY - bowY) * t;
+          const cs = +(seat.scale + (1.22 - seat.scale) * t).toFixed(2);
+          if (s % 2 === 1) {
+            spawnFootprintRipple(layer, cx, cy, cs, true);
+          }
+        }, 1820 + s * 190)
+      );
+    }
+
+    timers.push(
+      setTimeout(() => {
+        if (walker.isConnected) walker.classList.add('cgw-fade-exit');
+      }, 3650)
+    );
+    timers.push(
+      setTimeout(() => {
+        while (timers.length) clearTimeout(timers.pop());
+        walker.remove();
+      }, 4150)
+    );
+  }
+
+  function _legacySpawnCarpetGuestWalker(ev) {
     const layer = document.getElementById('carpetWalkerLayer');
     if (!layer || !ev) return;
 
@@ -1525,6 +2043,22 @@
     particles.spawnIncenseBurst(540, 895);
     if (ambientTick % 2 === 0 && prostrationTimers.length === 0) {
       playThreeBowsSequence(0);
+    }
+    // Luồng Phật tử vào/ra lễ Phật tự nhiên liên tục để Chánh Điện luôn sống động như thật
+    const idleMs = Date.now() - lastWalkerSpawnMs;
+    if (ambientTick % 2 === 1) {
+      spawnLeavingDevotee();
+    } else if (idleMs > 6200) {
+      const AMBIENT_PILGRIMS = [
+        'Phật Tử Diệu Âm',
+        'Thí Chủ Minh Đức',
+        'Phật Tử Thanh Tâm',
+        'Thí Chủ Bảo An',
+        'Phật Tử Từ Tâm',
+        'Thí Chủ Phúc Lộc'
+      ];
+      const name = AMBIENT_PILGRIMS[ambientTick % AMBIENT_PILGRIMS.length];
+      spawnCarpetGuestWalker({ user: name, merit: 2 });
     }
   }, 4500);
 })();
